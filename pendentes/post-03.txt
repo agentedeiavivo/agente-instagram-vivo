@@ -1,9 +1,0 @@
-Um dos medos mais comuns sobre IA nos negócios: "se eu automatizar demais, perco o controle das decisões."
-
-Na prática é o contrário. Um agente de IA bem construído não decide no seu lugar — ele organiza informação e contexto pra que você decida melhor e mais rápido.
-
-A decisão final continua sendo humana. O que muda é a qualidade da informação que chega até ela.
-
-Comenta aqui: qual outro mito sobre IA você já ouviu por aí?
-
-#mitoouverdade #inteligenciaartificial #iaparanegocios #agentedeia #tecnologia #automacao #gestaodenegocios
