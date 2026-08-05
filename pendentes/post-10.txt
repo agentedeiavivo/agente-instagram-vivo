@@ -1,0 +1,7 @@
+"IA não erra" é um dos mitos mais perigosos que ainda circula por aí — e é exatamente o tipo de expectativa que gera frustração depois.
+
+IA erra sim. A diferença entre uma boa implementação e uma ruim não é "zero erro" — é ter memória e revisão pra corrigir rápido, antes que o erro vire padrão.
+
+Comenta aqui: você já teve uma experiência ruim com IA que poderia ter sido evitada com mais revisão?
+
+#mitoouverdade #inteligenciaartificial #agentedeia #iaparanegocios #tecnologia #automacao

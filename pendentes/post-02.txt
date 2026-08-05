@@ -1,0 +1,9 @@
+Skill é uma das partes menos faladas — e mais importantes — de um agente de IA de verdade.
+
+Em vez de reprogramar todo o agente toda vez que ele precisa fazer algo novo, você adiciona uma skill: um pacote de instrução + conhecimento específico que ele aciona sob demanda.
+
+É isso que permite escalar um agente sem quebrar o que já está funcionando.
+
+Salva esse post pra explicar pra próxima pessoa que perguntar "o que é skill mesmo?"
+
+#skills #agentedeia #iaparanegocios #inteligenciaartificial #automacaointeligente #tecnologia #chatgpt #frameworkdeia
