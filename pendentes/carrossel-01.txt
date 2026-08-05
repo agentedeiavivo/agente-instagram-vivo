@@ -1,0 +1,7 @@
+A maioria dos "agentes de IA" vendidos por aí só tem 2 desses 7 pilares — e isso explica muita frustração com IA no negócio.
+
+Arrasta pro lado e confere o framework completo: Modelo, Contexto, Tools, Memória, Skills, Runtime e Motor de Evolução.
+
+Salva esse carrossel — você vai precisar consultar de novo na hora de avaliar qualquer solução de IA.
+
+#frameworkdeia #agentedeia #iaparaempresas #inteligenciaartificial #tecnologia #automacaointeligente #chatgptbusiness

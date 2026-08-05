@@ -1,0 +1,7 @@
+Skills são o que permitem um agente de IA aprender novas habilidades sem precisar ser reprogramado do zero.
+
+Arrasta pro lado pra entender como isso funciona na prática — e por que é essencial pra escalar qualquer agente sem quebrar o que já funciona.
+
+Salva esse carrossel: você vai usar esse conceito toda vez que pensar em expandir seu agente.
+
+#skills #agentedeia #iaparaempresas #inteligenciaartificial #automacaointeligente #frameworkdeia

@@ -6,16 +6,20 @@ computador ligado.
 
 ## Como funciona
 
-1. Você coloca pares de arquivos (`imagem.jpg` + `imagem.txt` com a legenda)
-   na pasta `pendentes/`.
+1. Você coloca os arquivos na pasta `pendentes/` — post único (`imagem.jpg` +
+   `imagem.txt`) ou carrossel (`carrossel-01_1.jpg` ... `carrossel-01_N.jpg` +
+   `carrossel-01.txt`). Ver `pendentes/LEIA-ME.md` para o formato exato.
 2. Duas vezes por dia, o GitHub Actions roda `script/postar_instagram.py`,
    que:
-   - escolhe o próximo post pendente (ordem alfabética do nome do arquivo);
-   - publica no Instagram usando a API oficial da Meta (Graph API);
-   - move o par publicado de `pendentes/` para `publicados/` e salva isso
-     como um commit no próprio repositório.
-3. Se `pendentes/` estiver vazia, o agente simplesmente não faz nada
-   naquela execução (sem erro).
+   - escolhe o próximo item pendente, post único ou carrossel inteiro
+     (ordem alfabética do nome-base);
+   - publica no Instagram usando a API oficial da Meta (Graph API) — post
+     único vira uma chamada simples; carrossel cria um container por slide
+     e depois um container "pai" que os agrupa;
+   - move os arquivos publicados de `pendentes/` para `publicados/` e salva
+     isso como um commit no próprio repositório.
+3. Se `pendentes/` estiver vazia (ou só tiver itens incompletos), o agente
+   simplesmente não faz nada naquela execução (sem erro).
 
 ## Estrutura
 
@@ -116,5 +120,5 @@ habilitada no workflow).
 - **Token expira a cada 60 dias** — sem renovação, o agente para de postar
   e a execução no Actions aparecerá com erro. Posso configurar um lembrete
   ou automatizar a renovação, se quiser.
-- Um post por execução — com 2 horários por dia, é 2 posts/dia no máximo
-  (ajustável no `postar-instagram.yml`).
+- Um item por execução (post único OU carrossel inteiro) — com 2 horários
+  por dia, é 2 itens/dia no máximo (ajustável no `postar-instagram.yml`).
