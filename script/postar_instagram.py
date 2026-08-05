@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
 """
 Agente de Marketing Instagram — Framework VIVO
-Lê a pasta pendentes/, escolhe o próximo item (post único OU carrossel),
-publica no Instagram via Graph API oficial da Meta, e move os arquivos
-publicados para publicados/.
 
-Convenção de arquivos em pendentes/:
-    Post único:
-        post-01.jpg  (ou .jpeg / .png)
-        post-01.txt  (legenda em texto puro, mesmo nome-base da imagem)
+Dois modos de execução:
+    python postar_instagram.py --modo posts        (rodado às 07h30)
+    python postar_instagram.py --modo carrosseis    (rodado às 18h30)
 
-    Carrossel (2 a 10 slides):
-        carrossel-01_1.jpg  carrossel-01_2.jpg  ...  carrossel-01_N.jpg
-        carrossel-01.txt    (legenda única do carrossel, sem sufixo de slide)
+Modo "posts": lê pendentes/posts/, escolhe o próximo par imagem+legenda
+(mesmo nome-base), publica como post único e move o par para
+publicados/posts/.
 
-Um item por execução (post único OU carrossel inteiro conta como 1 execução;
-o workflow do GitHub Actions roda 2x por dia). Itens são escolhidos em ordem
-alfabética do nome-base (ex.: "carrossel-01" vem antes de "post-01").
+Modo "carrosseis": lê pendentes/carrosseis/, escolhe a próxima subpasta
+(carrossel-01-.../slide_01.png ... slide_NN.png + caption.txt), publica
+como carrossel (2 a 10 imagens) e move a pasta inteira para
+publicados/carrosseis/.
+
+Em ambos os casos: publica via Instagram Graph API oficial da Meta
+(`image_url` = raw.githubusercontent.com da própria imagem no repo — por
+isso o repo precisa ser público) e commita a mudança usando o GITHUB_TOKEN
+padrão do Actions.
 """
 
+import argparse
 import os
-import re
 import subprocess
 import sys
 import time
@@ -34,11 +36,10 @@ GRAPH_API_BASE = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PENDENTES_DIR = REPO_ROOT / "pendentes"
-PUBLICADOS_DIR = REPO_ROOT / "publicados"
-
-POST_RE = re.compile(r"^(post-\d+)\.(jpg|jpeg|png)$", re.IGNORECASE)
-CAROUSEL_SLIDE_RE = re.compile(r"^(carrossel-\d+)_(\d+)\.(jpg|jpeg|png)$", re.IGNORECASE)
+PENDENTES_POSTS_DIR = REPO_ROOT / "pendentes" / "posts"
+PUBLICADOS_POSTS_DIR = REPO_ROOT / "publicados" / "posts"
+PENDENTES_CARROSSEIS_DIR = REPO_ROOT / "pendentes" / "carrosseis"
+PUBLICADOS_CARROSSEIS_DIR = REPO_ROOT / "publicados" / "carrosseis"
 
 
 def log(msg: str) -> None:
@@ -74,124 +75,44 @@ def carregar_configuracao() -> dict:
     }
 
 
-def encontrar_proximo_item() -> dict | None:
-    """
-    Varre pendentes/ e retorna o próximo item completo (post único ou carrossel),
-    em ordem alfabética do nome-base. Formato do retorno:
-        {"tipo": "post", "imagem": Path, "legenda": Path}
-        {"tipo": "carrossel", "imagens": [Path, ...], "legenda": Path}
-    Ignora arquivos incompletos (imagem sem legenda, ou carrossel com slide faltando)
-    com um aviso, e continua procurando o próximo candidato.
-    """
-    if not PENDENTES_DIR.exists():
-        return None
-
-    arquivos = [p for p in PENDENTES_DIR.iterdir() if p.is_file()]
-
-    posts: dict[str, Path] = {}
-    carrosseis: dict[str, dict[int, Path]] = {}
-
-    for p in arquivos:
-        m_post = POST_RE.match(p.name)
-        if m_post:
-            posts[m_post.group(1)] = p
-            continue
-        m_slide = CAROUSEL_SLIDE_RE.match(p.name)
-        if m_slide:
-            base, indice = m_slide.group(1), int(m_slide.group(2))
-            carrosseis.setdefault(base, {})[indice] = p
-
-    candidatos: list[tuple[str, dict]] = []
-
-    for base, imagem in posts.items():
-        legenda = imagem.with_suffix(".txt")
-        if legenda.exists():
-            candidatos.append((base, {"tipo": "post", "imagem": imagem, "legenda": legenda}))
-        else:
-            log(f"Aviso: '{imagem.name}' não tem legenda correspondente ('{legenda.name}'). Pulando.")
-
-    for base, slides_dict in carrosseis.items():
-        legenda = PENDENTES_DIR / f"{base}.txt"
-        indices = sorted(slides_dict.keys())
-        sequencia_ok = indices == list(range(1, len(indices) + 1))
-        if not sequencia_ok:
-            log(f"Aviso: carrossel '{base}' tem slides fora de sequência ({indices}). Pulando.")
-            continue
-        if not legenda.exists():
-            log(f"Aviso: carrossel '{base}' não tem legenda correspondente ('{base}.txt'). Pulando.")
-            continue
-        if len(indices) < 2:
-            log(f"Aviso: carrossel '{base}' tem só 1 slide — trate como post único. Pulando.")
-            continue
-        if len(indices) > 10:
-            log(f"Aviso: carrossel '{base}' tem mais de 10 slides (limite da API). Pulando.")
-            continue
-        imagens_em_ordem = [slides_dict[i] for i in indices]
-        candidatos.append((base, {"tipo": "carrossel", "imagens": imagens_em_ordem, "legenda": legenda}))
-
-    if not candidatos:
-        return None
-
-    candidatos.sort(key=lambda c: c[0])
-    return candidatos[0][1]
-
-
-def montar_url_publica(imagem: Path, config: dict) -> str:
-    caminho_relativo = imagem.relative_to(REPO_ROOT).as_posix()
+def montar_url_publica(caminho: Path, config: dict) -> str:
+    caminho_relativo = caminho.relative_to(REPO_ROOT).as_posix()
     return f"https://raw.githubusercontent.com/{config['github_repository']}/{config['branch']}/{caminho_relativo}"
 
 
-def criar_container_de_midia(image_url: str, legenda: str, config: dict) -> str:
-    """Cria o container de um post único (com legenda embutida)."""
+def criar_container_de_midia(image_url: str, config: dict, caption: str | None = None, is_carousel_item: bool = False) -> str:
+    dados_form = {
+        "image_url": image_url,
+        "access_token": config["access_token"],
+    }
+    if caption is not None:
+        dados_form["caption"] = caption
+    if is_carousel_item:
+        dados_form["is_carousel_item"] = "true"
+
     url = f"{GRAPH_API_BASE}/{config['ig_user_id']}/media"
-    resp = requests.post(
-        url,
-        data={
-            "image_url": image_url,
-            "caption": legenda,
-            "access_token": config["access_token"],
-        },
-        timeout=60,
-    )
+    resp = requests.post(url, data=dados_form, timeout=60)
     dados = resp.json()
     if resp.status_code != 200 or "id" not in dados:
         erro_fatal(f"Falha ao criar container de mídia: {dados}")
     return dados["id"]
 
 
-def criar_item_de_carrossel(image_url: str, config: dict) -> str:
-    """Cria o container de UM slide de carrossel (sem legenda — a legenda vai só no pai)."""
-    url = f"{GRAPH_API_BASE}/{config['ig_user_id']}/media"
-    resp = requests.post(
-        url,
-        data={
-            "image_url": image_url,
-            "is_carousel_item": "true",
-            "access_token": config["access_token"],
-        },
-        timeout=60,
-    )
-    dados = resp.json()
-    if resp.status_code != 200 or "id" not in dados:
-        erro_fatal(f"Falha ao criar item de carrossel: {dados}")
-    return dados["id"]
-
-
-def criar_container_pai_carrossel(children_ids: list[str], legenda: str, config: dict) -> str:
+def criar_container_de_carrossel(children_ids: list[str], caption: str, config: dict) -> str:
     url = f"{GRAPH_API_BASE}/{config['ig_user_id']}/media"
     resp = requests.post(
         url,
         data={
             "media_type": "CAROUSEL",
             "children": ",".join(children_ids),
-            "caption": legenda,
+            "caption": caption,
             "access_token": config["access_token"],
         },
         timeout=60,
     )
     dados = resp.json()
     if resp.status_code != 200 or "id" not in dados:
-        erro_fatal(f"Falha ao criar container pai do carrossel: {dados}")
+        erro_fatal(f"Falha ao criar container de carrossel: {dados}")
     return dados["id"]
 
 
@@ -205,13 +126,13 @@ def aguardar_container_pronto(creation_id: str, config: dict, tentativas: int = 
         )
         dados = resp.json()
         status = dados.get("status_code")
-        log(f"Status do container ({tentativa}/{tentativas}): {status}")
+        log(f"Status do container {creation_id} ({tentativa}/{tentativas}): {status}")
         if status == "FINISHED":
             return
         if status == "ERROR":
             erro_fatal(f"Container de mídia falhou no processamento: {dados}")
         time.sleep(intervalo_s)
-    erro_fatal("Container de mídia não ficou pronto (status FINISHED) dentro do tempo esperado.")
+    erro_fatal(f"Container {creation_id} não ficou pronto (status FINISHED) dentro do tempo esperado.")
 
 
 def publicar_container(creation_id: str, config: dict) -> str:
@@ -227,20 +148,12 @@ def publicar_container(creation_id: str, config: dict) -> str:
     return dados["id"]
 
 
-def mover_para_publicados(arquivos: list[Path]) -> None:
-    PUBLICADOS_DIR.mkdir(exist_ok=True)
-    for arquivo in arquivos:
-        destino = PUBLICADOS_DIR / arquivo.name
-        arquivo.rename(destino)
-        log(f"Movido: {arquivo.relative_to(REPO_ROOT)} -> {destino.relative_to(REPO_ROOT)}")
-
-
-def commit_e_push() -> None:
+def commit_e_push(mensagem: str) -> None:
     comandos = [
         ["git", "config", "user.name", "agente-instagram-vivo"],
         ["git", "config", "user.email", "agente-instagram-vivo@users.noreply.github.com"],
         ["git", "add", "pendentes", "publicados"],
-        ["git", "commit", "-m", "Post publicado automaticamente: move item de pendentes/ para publicados/"],
+        ["git", "commit", "-m", mensagem],
         ["git", "push"],
     ]
     for cmd in comandos:
@@ -252,15 +165,50 @@ def commit_e_push() -> None:
             erro_fatal(f"Comando git falhou: {' '.join(cmd)}\n{resultado.stdout}\n{resultado.stderr}")
 
 
-def publicar_post_unico(item: dict, config: dict) -> None:
-    imagem, legenda_arquivo = item["imagem"], item["legenda"]
+# ---------------------------------------------------------------------------
+# Modo "posts" (imagem única)
+# ---------------------------------------------------------------------------
+
+def encontrar_proximo_post() -> tuple[Path, Path] | None:
+    if not PENDENTES_POSTS_DIR.exists():
+        return None
+
+    imagens = sorted(
+        p for p in PENDENTES_POSTS_DIR.iterdir()
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
+    )
+
+    for imagem in imagens:
+        legenda = imagem.with_suffix(".txt")
+        if legenda.exists():
+            return imagem, legenda
+        log(f"Aviso: '{imagem.name}' não tem legenda correspondente ('{legenda.name}'). Pulando.")
+
+    return None
+
+
+def mover_post_para_publicados(imagem: Path, legenda: Path) -> None:
+    PUBLICADOS_POSTS_DIR.mkdir(parents=True, exist_ok=True)
+    for arquivo in (imagem, legenda):
+        destino = PUBLICADOS_POSTS_DIR / arquivo.name
+        arquivo.rename(destino)
+        log(f"Movido: {arquivo.relative_to(REPO_ROOT)} -> {destino.relative_to(REPO_ROOT)}")
+
+
+def executar_modo_posts(config: dict) -> None:
+    proximo = encontrar_proximo_post()
+    if proximo is None:
+        log("Nenhum post pendente encontrado em pendentes/posts/. Nada a fazer.")
+        return
+
+    imagem, legenda_arquivo = proximo
     legenda_texto = legenda_arquivo.read_text(encoding="utf-8").strip()
 
-    log(f"Próximo item: post único — {imagem.name}")
+    log(f"Próximo post: {imagem.name}")
     image_url = montar_url_publica(imagem, config)
     log(f"URL pública da imagem: {image_url}")
 
-    creation_id = criar_container_de_midia(image_url, legenda_texto, config)
+    creation_id = criar_container_de_midia(image_url, config, caption=legenda_texto)
     log(f"Container de mídia criado: {creation_id}")
 
     aguardar_container_pronto(creation_id, config)
@@ -268,49 +216,102 @@ def publicar_post_unico(item: dict, config: dict) -> None:
     post_id = publicar_container(creation_id, config)
     log(f"Post publicado com sucesso. ID: {post_id}")
 
-    mover_para_publicados([imagem, legenda_arquivo])
+    mover_post_para_publicados(imagem, legenda_arquivo)
+    commit_e_push("Post publicado automaticamente: move item de pendentes/posts/ para publicados/posts/")
+
+    log("Concluído.")
 
 
-def publicar_carrossel(item: dict, config: dict) -> None:
-    imagens, legenda_arquivo = item["imagens"], item["legenda"]
-    legenda_texto = legenda_arquivo.read_text(encoding="utf-8").strip()
+# ---------------------------------------------------------------------------
+# Modo "carrosseis" (múltiplas imagens)
+# ---------------------------------------------------------------------------
 
-    log(f"Próximo item: carrossel com {len(imagens)} slides — base '{imagens[0].stem.rsplit('_', 1)[0]}'")
+def encontrar_proximo_carrossel() -> Path | None:
+    if not PENDENTES_CARROSSEIS_DIR.exists():
+        return None
+
+    pastas = sorted(
+        p for p in PENDENTES_CARROSSEIS_DIR.iterdir()
+        if p.is_dir()
+    )
+
+    for pasta in pastas:
+        legenda = pasta / "caption.txt"
+        imagens = sorted(
+            p for p in pasta.iterdir()
+            if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
+        )
+        if not legenda.exists():
+            log(f"Aviso: pasta '{pasta.name}' não tem 'caption.txt'. Pulando.")
+            continue
+        if len(imagens) < 2:
+            log(f"Aviso: pasta '{pasta.name}' tem menos de 2 imagens (mínimo do Instagram). Pulando.")
+            continue
+        if len(imagens) > 10:
+            log(f"Aviso: pasta '{pasta.name}' tem mais de 10 imagens (máximo do Instagram). Pulando.")
+            continue
+        return pasta
+
+    return None
+
+
+def mover_carrossel_para_publicados(pasta: Path) -> None:
+    PUBLICADOS_CARROSSEIS_DIR.mkdir(parents=True, exist_ok=True)
+    destino = PUBLICADOS_CARROSSEIS_DIR / pasta.name
+    pasta.rename(destino)
+    log(f"Movido: {pasta.relative_to(REPO_ROOT)} -> {destino.relative_to(REPO_ROOT)}")
+
+
+def executar_modo_carrosseis(config: dict) -> None:
+    pasta = encontrar_proximo_carrossel()
+    if pasta is None:
+        log("Nenhum carrossel pendente encontrado em pendentes/carrosseis/. Nada a fazer.")
+        return
+
+    legenda_texto = (pasta / "caption.txt").read_text(encoding="utf-8").strip()
+    imagens = sorted(
+        p for p in pasta.iterdir()
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
+    )
+
+    log(f"Próximo carrossel: {pasta.name} ({len(imagens)} imagens)")
 
     children_ids = []
     for imagem in imagens:
         image_url = montar_url_publica(imagem, config)
-        log(f"Criando item de carrossel: {imagem.name} -> {image_url}")
-        child_id = criar_item_de_carrossel(image_url, config)
-        log(f"Item de carrossel criado: {child_id}")
+        log(f"Criando item do carrossel a partir de: {image_url}")
+        child_id = criar_container_de_midia(image_url, config, is_carousel_item=True)
+        aguardar_container_pronto(child_id, config, tentativas=8, intervalo_s=3)
         children_ids.append(child_id)
 
-    creation_id = criar_container_pai_carrossel(children_ids, legenda_texto, config)
-    log(f"Container pai do carrossel criado: {creation_id}")
+    log(f"{len(children_ids)} itens criados. Criando container do carrossel...")
+    creation_id = criar_container_de_carrossel(children_ids, legenda_texto, config)
+    log(f"Container de carrossel criado: {creation_id}")
 
-    aguardar_container_pronto(creation_id, config)
+    aguardar_container_pronto(creation_id, config, tentativas=15, intervalo_s=5)
 
     post_id = publicar_container(creation_id, config)
     log(f"Carrossel publicado com sucesso. ID: {post_id}")
 
-    mover_para_publicados(imagens + [legenda_arquivo])
+    mover_carrossel_para_publicados(pasta)
+    commit_e_push("Carrossel publicado automaticamente: move pasta de pendentes/carrosseis/ para publicados/carrosseis/")
 
+    log("Concluído.")
+
+
+# ---------------------------------------------------------------------------
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--modo", choices=["posts", "carrosseis"], required=True)
+    args = parser.parse_args()
+
     config = carregar_configuracao()
 
-    item = encontrar_proximo_item()
-    if item is None:
-        log("Nenhum item pendente encontrado em pendentes/. Nada a fazer.")
-        return
-
-    if item["tipo"] == "post":
-        publicar_post_unico(item, config)
+    if args.modo == "posts":
+        executar_modo_posts(config)
     else:
-        publicar_carrossel(item, config)
-
-    commit_e_push()
-    log("Concluído.")
+        executar_modo_carrosseis(config)
 
 
 if __name__ == "__main__":

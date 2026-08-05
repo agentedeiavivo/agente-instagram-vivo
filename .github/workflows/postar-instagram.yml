@@ -2,11 +2,20 @@ name: Postar no Instagram
 
 on:
   schedule:
-    # 07:30 horário de Brasília (UTC-3) = 10:30 UTC
+    # 07:30 horário de Brasília (UTC-3) = 10:30 UTC -> posts estáticos
     - cron: "30 10 * * *"
-    # 18:30 horário de Brasília (UTC-3) = 21:30 UTC
+    # 18:30 horário de Brasília (UTC-3) = 21:30 UTC -> carrosséis
     - cron: "30 21 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "O que postar"
+        required: true
+        default: "posts"
+        type: choice
+        options:
+          - posts
+          - carrosseis
 
 permissions:
   contents: write
@@ -30,8 +39,19 @@ jobs:
       - name: Instalar dependências
         run: pip install -r script/requirements.txt
 
+      - name: Determinar modo (posts ou carrosseis)
+        id: modo
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "valor=${{ inputs.modo }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 21 * * *" ]; then
+            echo "valor=carrosseis" >> "$GITHUB_OUTPUT"
+          else
+            echo "valor=posts" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Executar agente de postagem
         env:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
-        run: python script/postar_instagram.py
+        run: python script/postar_instagram.py --modo ${{ steps.modo.outputs.valor }}
