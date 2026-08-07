@@ -1,9 +1,6 @@
 name: Postar Carrosséis no Instagram
 
 on:
-  schedule:
-    # 18:30 horário de Brasília (UTC-3) = 21:30 UTC -> carrosséis
-    - cron: "30 21 * * *"
   workflow_dispatch: {}
 
 permissions:
