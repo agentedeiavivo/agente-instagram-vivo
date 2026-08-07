@@ -1,9 +1,6 @@
 name: Postar Posts no Instagram
 
 on:
-  schedule:
-    # 07:30 horário de Brasília (UTC-3) = 10:30 UTC -> posts estáticos
-    - cron: "30 10 * * *"
   workflow_dispatch: {}
 
 permissions:
