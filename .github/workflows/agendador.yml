@@ -1,0 +1,21 @@
+name: Agendador de Postagem
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      forcar_modo: { type: choice, default: nenhum, options: [nenhum, posts, carrosseis] }
+
+permissions: { contents: read, actions: write }
+
+concurrency: { group: agendador-postagem, cancel-in-progress: false }
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - env: { GH_TOKEN: "${{ github.token }}", FORCAR_MODO: "${{ inputs.forcar_modo }}" }
+        run: bash script/agendador.sh
