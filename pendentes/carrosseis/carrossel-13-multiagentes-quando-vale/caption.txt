@@ -1,0 +1,7 @@
+Um agente tentando fazer tudo sozinho tende a ser mediano em cada etapa — não bom em nenhuma.
+
+Arrasta pro lado pra entender quando vale a pena dividir o trabalho entre agentes especialistas, e quando isso é só complexidade desnecessária pro seu caso.
+
+Salva esse carrossel antes de decidir se seu próximo passo é 1 agente melhor ou vários trabalhando junto.
+
+#multiagentes #agentedeia #frameworkdeia #inteligenciaartificial #tecnologia #automacaointeligente

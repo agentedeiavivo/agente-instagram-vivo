@@ -1,0 +1,9 @@
+"Meu agente lê meus documentos" é a frase mais repetida — e uma das menos verificadas — em quem vende IA pra empresa.
+
+Ler não é a parte difícil. Buscar o pedaço CERTO do documento no momento certo é. Isso se chama RAG, e é onde a maioria das implementações falha silenciosamente: parece que funciona, até alguém perguntar algo específico.
+
+Teste simples: pergunte pro seu agente algo cuja resposta está escondida num trecho obscuro do seu material. Se ele errar ou inventar, o problema não é o modelo — é a organização por trás.
+
+Salva esse post e testa no seu agente hoje.
+
+#rag #agentedeia #inteligenciaartificial #iaparaempresas #diagnostico #tecnologia

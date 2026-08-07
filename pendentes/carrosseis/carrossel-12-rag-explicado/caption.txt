@@ -1,0 +1,7 @@
+"Meu agente lê meus documentos" é a frase mais repetida — e uma das menos verificadas — quando alguém vende IA pra empresa.
+
+Arrasta pro lado pra entender o que realmente acontece por trás dessa frase, o erro mais comum, e como testar em 30 segundos se está funcionando de verdade no seu caso.
+
+Salva esse carrossel e testa no seu agente ainda hoje.
+
+#rag #agentedeia #inteligenciaartificial #diagnostico #iaparaempresas #tecnologia

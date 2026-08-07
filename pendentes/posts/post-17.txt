@@ -1,0 +1,9 @@
+Um modelo novo sai quase toda semana. Isso não significa que o framework do seu agente precisa mudar toda semana também.
+
+A base — contexto do seu negócio, ferramentas que ele usa, memória, limites do que pode decidir sozinho — é estrutural e estável. O que muda é qual modelo específico está "por trás" dessa estrutura.
+
+Quem constrói em cima da base certa troca de modelo sem refazer tudo. Quem constrói em cima do modelo refaz tudo a cada atualização.
+
+Salva esse post — é o argumento certo pra não entrar em pânico a cada lançamento novo.
+
+#agentedeia #frameworkdeia #evolucaocontinua #inteligenciaartificial #tecnologia #iaparaempresas

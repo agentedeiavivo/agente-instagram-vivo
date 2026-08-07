@@ -1,0 +1,9 @@
+Testei dezenas de "agentes de IA" que, no fundo, eram um fluxo do n8n com um nome mais bonito.
+
+Não tem nada de errado em automação — o problema é vender fluxo fixo como se fosse decisão inteligente. Automação faz exatamente o que foi desenhada pra fazer. Agente decide o que fazer quando a situação foge do desenho.
+
+A pergunta que desmonta o discurso de vendas: "o que acontece quando o cliente pergunta algo que não estava previsto?" Se a resposta é "trava", não é agente.
+
+Comenta aqui: você já caiu nessa confusão?
+
+#agentedeia #automacao #n8n #miteverdade #iaparaempresas #tecnologia

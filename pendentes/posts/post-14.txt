@@ -1,0 +1,9 @@
+Um agente tentando fazer tudo sozinho — pesquisar, decidir e executar — tende a ser mediano em cada etapa, em vez de bom em alguma.
+
+Quando a tarefa tem fases muito diferentes entre si, dividir entre agentes especialistas (com um orquestrador coordenando) costuma render mais do que forçar um generalista a dar conta de tudo.
+
+Isso não é "mais avançado" por padrão — é mais complexo de manter. Só vale a pena quando o processo já justifica essa complexidade.
+
+Comenta: seu processo hoje seria mais bem servido por 1 agente ou por vários trabalhando junto?
+
+#multiagentes #agentedeia #frameworkdeia #inteligenciaartificial #automacaointeligente #tecnologia
